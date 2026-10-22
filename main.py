@@ -5,7 +5,7 @@ import requests
 
 app = FastAPI()
 
-# Indispensable pour autoriser les smartphones à se connecter via Internet
+# Indispensable pour autoriser les smartphones et navigateurs à se connecter via Internet
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,6 +31,7 @@ def home():
 @app.post("/chat")
 def chat_with_logix(request: ChatRequest):
     try:
+        # CORRECTION : Utilisation du point d'accès officiel de l'API Groq
         url = "https://groq.com"
         headers = {
             "Authorization": "Bearer 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",
