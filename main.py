@@ -1,19 +1,11 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
+import streamlit as str_app
 import requests
 
-app = FastAPI()
+str_app.set_page_config(page_title="LogiSup - Assistant Logix", page_icon="📦")
+str_app.title("💬 LogiSup - Assistant Logix")
+str_app.caption("🚀 Votre IA experte en Transport, Logistique & Commerce International")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Votre clé API Gemini
+# Votre clé officielle sécurisée Google Gemini
 GEMINI_API_KEY = "AQ.Ab8RN6K7Jj4-B_fykXRcs1LOg31Hob0BDj-vl9wCQSdBcPArBg"
 
 LOGIX_PROMPT = (
@@ -23,32 +15,39 @@ LOGIX_PROMPT = (
     "Si la question sort de ce cadre, tu dois répondre EXACTEMENT et UNIQUEMENT : 'RAS, je n'ai pas été programmée pour ça.'"
 )
 
-class ChatRequest(BaseModel):
-    message: str
+if "messages" not in str_app.session_state:
+    str_app.session_state["messages"] = [
+        {"role": "assistant", "content": "Bonjour ! Je suis Logix, votre IA experte en Logistique. Posez-moi vos questions sur la supply chain, les stocks ou les Incoterms."}
+    ]
 
-@app.get("/")
-def home():
-    return {"status": "Le serveur de Logix est en ligne et fonctionnel !"}
+for msg in str_app.session_state.messages:
+    str_app.chat_message(msg["role"]).write(msg["content"])
 
-@app.post("/chat")
-def chat_with_logix(request: ChatRequest):
-    try:
-        # CORRECTION DE L'URL : Ajout du modèle exact dans le chemin de l'URL Google
-        url = f"https://googleapis.com{GEMINI_API_KEY}"
-        headers = {
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "contents": [{"parts": [{"text": request.message}]}],
-            "systemInstruction": {"parts": [{"text": LOGIX_PROMPT}]},
-            "generationConfig": {"temperature": 0.3}
-        }
-        
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        
-        if response.status_code == 200:
-            return {"reply": response.json()['candidates'][0]['content']['parts'][0]['text']}
-        else:
-            return {"reply": f"Erreur Google API (Code {response.status_code}) : {response.text}"}
-    except Exception as e:
-        return {"reply": f"Erreur de transmission : {str(e)}"}
+if user_query := str_app.chat_input("Posez votre question en logistique..."):
+    str_app.session_state.messages.append({"role": "user", "content": user_query})
+    str_app.chat_message("user").write(user_query)
+    
+    with str_app.spinner("Logix réfléchit..."):
+        try:
+            url = "https://googleapis.com"
+            headers = {
+                "Authorization": f"Bearer {GEMINI_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "contents": [{"parts": [{"text": user_query}]}],
+                "systemInstruction": {"parts": [{"text": LOGIX_PROMPT}]},
+                "generationConfig": {"temperature": 0.3}
+            }
+            
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                bot_reply = response.json()['candidates']['content']['parts']['text']
+            else:
+                bot_reply = f"Erreur Google (Code {response.status_code})."
+        except Exception as err:
+            bot_reply = f"Erreur de transmission : {str(err)}"
+            
+    str_app.session_state.messages.append({"role": "assistant", "content": bot_reply})
+    str_app.chat_message("assistant").write(bot_reply)
