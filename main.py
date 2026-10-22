@@ -1,53 +1,55 @@
-import streamlit as str_app
+from fastapi import FastAPI
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 import requests
 
-str_app.set_page_config(page_title="LogiSup - Assistant Logix", page_icon="📦")
-str_app.title("💬 LogiSup - Assistant Logix")
-str_app.caption("🚀 Votre IA experte en Transport, Logistique & Commerce International")
+app = FastAPI()
 
-# Votre clé officielle sécurisée Google Gemini
-GEMINI_API_KEY = "AQ.Ab8RN6K7Jj4-B_fykXRcs1LOg31Hob0BDj-vl9wCQSdBcPArBg"
+# INDISPENSABLE POUR LES APPS MOBILES : Autorise les smartphones à se connecter via Internet
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 LOGIX_PROMPT = (
     "Tu es Logix, une IA experte stricte en Transport, Logistique et Commerce international pour l'application LogiSup. "
-    "Tu dois chercher des réponses sur internet et répondre UNIQUEMENT à des questions liées à la gestion des stocks, la supply chain, "
-    "les Incoterms, le fret maritime/aérien/routier, les calculs de coûts de transport et les réglementations douanières. "
-    "Si la question sort de ce cadre, tu dois répondre EXACTEMENT et UNIQUEMENT : 'RAS, je n'ai pas été programmée pour ça.'"
+    "Réponds UNIQUEMENT à des questions liées à la gestion des stocks, la supply chain, les Incoterms, le fret maritime/aérien/routier, "
+    "les calculs de coûts de transport et les réglementations douanières. Si la question sort de ce cadre, réponds strictement : "
+    "'RAS, je n'ai pas été programmée pour ça.'"
 )
 
-if "messages" not in str_app.session_state:
-    str_app.session_state["messages"] = [
-        {"role": "assistant", "content": "Bonjour ! Je suis Logix, votre IA experte en Logistique. Posez-moi vos questions sur la supply chain, les stocks ou les Incoterms."}
-    ]
+class ChatRequest(BaseModel):
+    message: str
 
-for msg in str_app.session_state.messages:
-    str_app.chat_message(msg["role"]).write(msg["content"])
+@app.get("/")
+def home():
+    return {"status": "Le serveur mondial de LogiSup est en ligne et prêt !"}
 
-if user_query := str_app.chat_input("Posez votre question en logistique..."):
-    str_app.session_state.messages.append({"role": "user", "content": user_query})
-    str_app.chat_message("user").write(user_query)
-    
-    with str_app.spinner("Logix réfléchit..."):
-        try:
-            url = "https://googleapis.com"
-            headers = {
-                "Authorization": f"Bearer {GEMINI_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "contents": [{"parts": [{"text": user_query}]}],
-                "systemInstruction": {"parts": [{"text": LOGIX_PROMPT}]},
-                "generationConfig": {"temperature": 0.3}
-            }
-            
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
-            
-            if response.status_code == 200:
-                bot_reply = response.json()['candidates']['content']['parts']['text']
-            else:
-                bot_reply = f"Erreur Google (Code {response.status_code})."
-        except Exception as err:
-            bot_reply = f"Erreur de transmission : {str(err)}"
-            
-    str_app.session_state.messages.append({"role": "assistant", "content": bot_reply})
-    str_app.chat_message("assistant").write(bot_reply)
+@app.post("/chat")
+def chat_with_logix(request: ChatRequest):
+    try:
+        # Utilisation d'une passerelle Cloud compatible avec toutes les connexions mobiles
+        url = "https://groq.com"
+        headers = {
+            "Authorization": "Bearer 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",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "llama-3.1-8b-instant",
+            "messages": [
+                {"role": "system", "content": LOGIX_PROMPT},
+                {"role": "user", "content": request.message}
+            ]
+        }
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            return {"reply": response.json()['choices']['message']['content']}
+        else:
+            return {"reply": f"Erreur de passerelle Cloud (Code {response.status_code})"}
+    except Exception as e:
+        return {"reply": f"Erreur de transmission réseau : {str(e)}"}
