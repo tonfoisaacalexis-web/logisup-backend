@@ -5,6 +5,7 @@ import requests
 
 app = FastAPI()
 
+# Autorisation universelle pour que l'interface Streamlit puisse communiquer
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,12 +14,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Votre clé API officielle enregistrée
+# Votre clé API Gemini
 GEMINI_API_KEY = "AQ.Ab8RN6K7Jj4-B_fykXRcs1LOg31Hob0BDj-vl9wCQSdBcPArBg"
 
 LOGIX_PROMPT = (
     "Tu es Logix, une IA experte stricte en Transport, Logistique et Commerce international pour l'application LogiSup. "
-    "Tu devez chercher des réponses sur internet et répondre UNIQUEMENT à des questions liées à la gestion des stocks, la supply chain, "
+    "Tu dois chercher des réponses sur internet et répondre UNIQUEMENT à des questions liées à la gestion des stocks, la supply chain, "
     "les Incoterms, le fret maritime/aérien/routier, les calculs de coûts de transport et les réglementations douanières. "
     "Si la question sort de ce cadre, tu dois répondre EXACTEMENT et UNIQUEMENT : 'RAS, je n'ai pas été programmée pour ça.'"
 )
@@ -30,6 +31,7 @@ class ChatRequest(BaseModel):
 def home():
     return {"status": "Le serveur de Logix est en ligne et fonctionnel !"}
 
+# LA ROUTE CRUCIALE QUI MANQUE AU SERVEUR
 @app.post("/chat")
 def chat_with_logix(request: ChatRequest):
     try:
@@ -47,8 +49,8 @@ def chat_with_logix(request: ChatRequest):
         response = requests.post(url, headers=headers, json=payload, timeout=30)
         
         if response.status_code == 200:
-            return {"reply": response.json()['candidates']['content']['parts']['text']}
+            return {"reply": response.json()['candidates'][0]['content']['parts'][0]['text']}
         else:
-            return {"reply": f"Erreur d'authentification Google Cloud (Code {response.status_code})."}
+            return {"reply": f"Erreur de validation de la clé API (Code {response.status_code})."}
     except Exception as e:
         return {"reply": f"Erreur de transmission : {str(e)}"}
