@@ -5,7 +5,6 @@ import requests
 
 app = FastAPI()
 
-# Autorisation universelle pour que l'interface Streamlit puisse communiquer
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,13 +30,12 @@ class ChatRequest(BaseModel):
 def home():
     return {"status": "Le serveur de Logix est en ligne et fonctionnel !"}
 
-# LA ROUTE CRUCIALE QUI MANQUE AU SERVEUR
 @app.post("/chat")
 def chat_with_logix(request: ChatRequest):
     try:
-        url = "https://googleapis.com"
+        # CORRECTION DE L'URL : Ajout du modèle exact dans le chemin de l'URL Google
+        url = f"https://googleapis.com{GEMINI_API_KEY}"
         headers = {
-            "Authorization": f"Bearer {GEMINI_API_KEY}",
             "Content-Type": "application/json"
         }
         payload = {
@@ -51,6 +49,6 @@ def chat_with_logix(request: ChatRequest):
         if response.status_code == 200:
             return {"reply": response.json()['candidates'][0]['content']['parts'][0]['text']}
         else:
-            return {"reply": f"Erreur de validation de la clé API (Code {response.status_code})."}
+            return {"reply": f"Erreur Google API (Code {response.status_code}) : {response.text}"}
     except Exception as e:
         return {"reply": f"Erreur de transmission : {str(e)}"}
